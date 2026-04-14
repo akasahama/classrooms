@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>教室検索</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f2f2f7;
+}
+
+/* コンテナ */
+.container {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* ヘッダーカード */
+.header-card {
+  background: white;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+/* タイトル */
+.title {
+  font-size: 26px;
+  font-weight: bold;
+  margin-bottom: 14px;
+}
+
+/* 検索バー */
+.search-box {
+  display: flex;
+  align-items: center;
+  background: #f2f2f7;
+  border-radius: 14px;
+  padding: 10px 14px;
+  transition: all 0.2s;
+}
+
+.search-box:focus-within {
+  background: #e9e9ef;
+  transform: scale(1.02);
+}
+
+.search-icon {
+  font-size: 18px;
+  margin-right: 8px;
+  color: #888;
+}
+
+input {
+  border: none;
+  outline: none;
+  font-size: 17px;
+  width: 100%;
+  background: transparent;
+}
+
+/* 候補 */
+#suggestions {
+  margin-top: 10px;
+}
+
+.item {
+  background: white;
+  padding: 14px;
+  margin-top: 6px;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  transition: all 0.2s;
+}
+
+.item:active {
+  transform: scale(0.97);
+  background: #e5e5ea;
+}
+
+/* 選択状態 */
+.item.selected {
+  background: #d0d0d0;
+}
+
+/* 結果カード */
+.result-card {
+  margin-top: 20px;
+  background: white;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  animation: fadeIn 0.3s ease;
+}
+
+.result-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.result-text {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #333;
+}
+
+/* アニメーション */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="header-card">
+    <div class="title">教室検索</div>
+
+    <div class="search-box">
+      <div class="search-icon">🔍</div>
+      <input type="text" id="room" placeholder="教室番号を入力">
+    </div>
+  </div>
+
+  <!-- 候補 -->
+  <div id="suggestions"></div>
+
+  <!-- 結果 -->
+  <div id="result" class="result-card" style="display:none;">
+    <div class="result-title" id="result-room"></div>
+    <div class="result-text" id="result-text"></div>
+  </div>
+
+</div>
+
+<script>
+// データ
+const rooms = {
+	"A108(会議室)": { building: "研究棟I(A棟)", floor: "1階", note: "正門から見て奥側" },
+	"A109(会議室兼社会科学研究科経営専門職専攻資料室)": { building: "研究棟I(A棟)", floor: "1階", note: "正門寄り" },
+	"A115(大会議室)": { building: "研究棟I(A棟)", floor: "1階", note: "正門寄り" },
+	"国際商経学部長室": { building: "研究棟I(A棟)", floor: "1階", note: "正門から見て奥側" },
+	"社会情報科学部長室": { building: "研究棟I(A棟)", floor: "1階", note: "正門から見て奥側" },
+	"閲覧室": { building: "研究棟I(A棟)", floor: "1階", note: "正門から見て奥側" },
+	"学生副部長室": { building: "研究棟I(A棟)", floor: "1階", note: "正門から見て奥側" },
+	"社会科学研究科長室": { building: "研究棟I(A棟)", floor: "1階", note: "正門から見て奥側" },
+	"事務室(A棟)": { building: "研究棟I(A棟)", floor: "1階", note: "正門から見て奥側" },
+	"ソーシャルデータサイエンス研究所長室": { building: "研究棟I(A棟)", floor: "1階", note: "正門から見て奥側" },
+	"教員談話室": { building: "研究棟I(A棟)", floor: "1階", note: "正門寄り" },
+	"経営研究科長室": { building: "研究棟I(A棟)", floor: "1階", note: "正門寄り" },
+	"学生談話室": { building: "研究棟I(A棟)", floor: "1階", note: "正門寄り" },
+	"産学人材育成センター": { building: "研究棟I(A棟)", floor: "1階", note: "正門寄り" },
+
+	"A201": { building: "研究棟I(A棟)", floor: "2階", note: "正門から見て奥側" },
+	"A202": { building: "研究棟I(A棟)", floor: "2階", note: "正門から見て奥側" },
+	"A203": { building: "研究棟I(A棟)", floor: "2階", note: "正門から見て奥側" },
+	"A204": { building: "研究棟I(A棟)", floor: "2階", note: "正門から見て奥側" },
+	"A205(共同研究室)": { building: "研究棟I(A棟)", floor: "2階", note: "正門から見て奥側" },
+	"地域創造機構": { building: "研究棟I(A棟)", floor: "2階", note: "正門から見て奥側" },
+	"A207": { building: "研究棟I(A棟)", floor: "2階", note: "正門から見て奥側" },
+	"A208(共同研究室)": { building: "研究棟I(A棟)", floor: "2階", note: "正門から見て奥側" },
+	"A209": { building: "研究棟I(A棟)", floor: "2階", note: "正門から見て奥側" },
+	"A210": { building: "研究棟I(A棟)", floor: "2階", note: "正門から見て奥側" },
+	"A211": { building: "研究棟I(A棟)", floor: "2階", note: "正門から見て奥側" },
+	"A212": { building: "研究棟I(A棟)", floor: "2階", note: "正門から見て奥側" },
+	"A213": { building: "研究棟I(A棟)", floor: "2階", note: "正門から見て奥側" },
+	"A214": { building: "研究棟I(A棟)", floor: "2階", note: "正門から見て奥側" },
+	"A215": { building: "研究棟I(A棟)", floor: "2階", note: "正門から見て奥側" },
+	"A216": { building: "研究棟I(A棟)", floor: "2階", note: "正門から見て奥側" },
+	"A217": { building: "研究棟I(A棟)", floor: "2階", note: "正門寄り" },
+	"A218": { building: "研究棟I(A棟)", floor: "2階", note: "正門寄り" },
+	"A219": { building: "研究棟I(A棟)", floor: "2階", note: "正門寄り" },
+	"A220": { building: "研究棟I(A棟)", floor: "2階", note: "正門寄り" },
+	"A221": { building: "研究棟I(A棟)", floor: "2階", note: "正門寄り" },
+	"A222": { building: "研究棟I(A棟)", floor: "2階", note: "正門寄り" },
+	"A223": { building: "研究棟I(A棟)", floor: "2階", note: "正門寄り" },
+	"A224": { building: "研究棟I(A棟)", floor: "2階", note: "正門寄り" },
+	"A225": { building: "研究棟I(A棟)", floor: "2階", note: "正門寄り" },
+	"A226": { building: "研究棟I(A棟)", floor: "2階", note: "正門寄り" },
+	"A227": { building: "研究棟I(A棟)", floor: "2階", note: "正門寄り" },
+	"A228": { building: "研究棟I(A棟)", floor: "2階", note: "正門寄り" },
+	"A229": { building: "研究棟I(A棟)", floor: "2階", note: "正門寄り" },
+	"A230": { building: "研究棟I(A棟)", floor: "2階", note: "正門寄り" },
+	"A231": { building: "研究棟I(A棟)", floor: "2階", note: "正門寄り" },
+
+	"A301": { building: "研究棟I(A棟)", floor: "3階", note: "正門から見て奥側" },
+	"A302": { building: "研究棟I(A棟)", floor: "3階", note: "正門から見て奥側" },
+	"A303": { building: "研究棟I(A棟)", floor: "3階", note: "正門から見て奥側" },
+	"A304": { building: "研究棟I(A棟)", floor: "3階", note: "正門から見て奥側" },
+	"A305": { building: "研究棟I(A棟)", floor: "3階", note: "正門から見て奥側" },
+	"A306": { building: "研究棟I(A棟)", floor: "3階", note: "正門から見て奥側" },
+	"A307": { building: "研究棟I(A棟)", floor: "3階", note: "正門から見て奥側" },
+	"A308": { building: "研究棟I(A棟)", floor: "3階", note: "正門から見て奥側" },
+	"A309": { building: "研究棟I(A棟)", floor: "3階", note: "正門から見て奥側,演習室" },
+	"A310": { building: "研究棟I(A棟)", floor: "3階", note: "正門から見て奥側" },
+	"A311": { building: "研究棟I(A棟)", floor: "3階", note: "正門から見て奥側" },
+	"A312": { building: "研究棟I(A棟)", floor: "3階", note: "正門から見て奥側" },
+	"A313": { building: "研究棟I(A棟)", floor: "3階", note: "正門から見て奥側" },
+	"A314": { building: "研究棟I(A棟)", floor: "3階", note: "正門から見て奥側" },
+	"A315": { building: "研究棟I(A棟)", floor: "3階", note: "正門から見て奥側" },
+	"A316": { building: "研究棟I(A棟)", floor: "3階", note: "正門から見て奥側" },
+	"A317": { building: "研究棟I(A棟)", floor: "3階", note: "正門から見て奥側" },
+	"A318": { building: "研究棟I(A棟)", floor: "3階", note: "正門寄り" },
+	"A319": { building: "研究棟I(A棟)", floor: "3階", note: "正門寄り" },
+	"A320": { building: "研究棟I(A棟)", floor: "3階", note: "正門寄り" },
+	"A321": { building: "研究棟I(A棟)", floor: "3階", note: "正門寄り" },
+	"A322": { building: "研究棟I(A棟)", floor: "3階", note: "正門寄り" },
+	"A323": { building: "研究棟I(A棟)", floor: "3階", note: "正門寄り" },
+	"A324": { building: "研究棟I(A棟)", floor: "3階", note: "正門寄り" },
+	"A325": { building: "研究棟I(A棟)", floor: "3階", note: "正門寄り" },
+	"A326": { building: "研究棟I(A棟)", floor: "3階", note: "正門寄り" },
+	"A327": { building: "研究棟I(A棟)", floor: "3階", note: "正門寄り" },
+	"A328": { building: "研究棟I(A棟)", floor: "3階", note: "正門寄り" },
+	"A329": { building: "研究棟I(A棟)", floor: "3階", note: "正門寄り" },
+	"A330": { building: "研究棟I(A棟)", floor: "3階", note: "正門寄り" },
+	"A331": { building: "研究棟I(A棟)", floor: "3階", note: "正門寄り" },
+
+	"A401": { building: "研究棟I(A棟)", floor: "4階", note: "正門から見て奥側" },
+	"A402": { building: "研究棟I(A棟)", floor: "4階", note: "正門から見て奥側" },
+	"A403": { building: "研究棟I(A棟)", floor: "4階", note: "正門から見て奥側" },
+	"A404": { building: "研究棟I(A棟)", floor: "4階", note: "正門から見て奥側" },
+	"A405": { building: "研究棟I(A棟)", floor: "4階", note: "正門から見て奥側" },
+	"A406": { building: "研究棟I(A棟)", floor: "4階", note: "正門から見て奥側" },
+	"A407": { building: "研究棟I(A棟)", floor: "4階", note: "正門から見て奥側" },
+	"A408": { building: "研究棟I(A棟)", floor: "4階", note: "正門から見て奥側" },
+	"A409": { building: "研究棟I(A棟)", floor: "4階", note: "正門から見て奥側,演習室" },
+	"A410": { building: "研究棟I(A棟)", floor: "4階", note: "正門から見て奥側" },
+	"A411": { building: "研究棟I(A棟)", floor: "4階", note: "正門から見て奥側" },
+	"A412": { building: "研究棟I(A棟)", floor: "4階", note: "正門から見て奥側" },
+	"A413": { building: "研究棟I(A棟)", floor: "4階", note: "正門から見て奥側" },
+	"A414": { building: "研究棟I(A棟)", floor: "4階", note: "正門から見て奥側" },
+	"A415": { building: "研究棟I(A棟)", floor: "4階", note: "正門から見て奥側" },
+	"A416": { building: "研究棟I(A棟)", floor: "4階", note: "正門から見て奥側,演習室" },
+	"A417": { building: "研究棟I(A棟)", floor: "4階", note: "正門寄り" },
+	"A418": { building: "研究棟I(A棟)", floor: "4階", note: "正門寄り" },
+	"A419": { building: "研究棟I(A棟)", floor: "4階", note: "正門寄り" },
+	"A420": { building: "研究棟I(A棟)", floor: "4階", note: "正門寄り" },
+	"A421": { building: "研究棟I(A棟)", floor: "4階", note: "正門寄り" },
+	"A422": { building: "研究棟I(A棟)", floor: "4階", note: "正門寄り" },
+	"A423": { building: "研究棟I(A棟)", floor: "4階", note: "正門寄り" },
+	"A424": { building: "研究棟I(A棟)", floor: "4階", note: "正門寄り" },
+	"A425": { building: "研究棟I(A棟)", floor: "4階", note: "正門寄り" },
+	"A426": { building: "研究棟I(A棟)", floor: "4階", note: "正門寄り" },
+	"A427": { building: "研究棟I(A棟)", floor: "4階", note: "正門寄り" },
+	"A428": { building: "研究棟I(A棟)", floor: "4階", note: "正門寄り" },
+	"A429": { building: "研究棟I(A棟)", floor: "4階", note: "正門寄り" },
+	"A430": { building: "研究棟I(A棟)", floor: "4階", note: "正門寄り" },
+	"A431": { building: "研究棟I(A棟)", floor: "4階", note: "正門寄り" },
+
+	"B101": { building: "研究棟II(B棟)", floor: "1階", note: "右側(教員研究室・実験室)" },
+	"B102": { building: "研究棟II(B棟)", floor: "1階", note: "右側(教員研究室・実験室)" },
+	"B103": { building: "研究棟II(B棟)", floor: "1階", note: "右側(教員研究室・実験室)" },
+	"B104": { building: "研究棟II(B棟)", floor: "1階", note: "右側(教員研究室・実験室)" },
+	"B105(学生研究室)": { building: "研究棟II(B棟)", floor: "1階", note: "右側(教員研究室・実験室)" },
+	"B106(学生研究室)": { building: "研究棟II(B棟)", floor: "1階", note: "右側(教員研究室・実験室)" },
+	"B107a(実験室)": { building: "研究棟II(B棟)", floor: "1階", note: "右側(教員研究室・実験室)" },
+	"B107b(大学院自習室)": { building: "研究棟II(B棟)", floor: "1階", note: "右側(教員研究室・実験室)" },
+	"B108(学生研究室)": { building: "研究棟II(B棟)", floor: "1階", note: "右側(教員研究室・実験室)" },
+	"B109": { building: "研究棟II(B棟)", floor: "1階", note: "右側(教員研究室・実験室)" },
+	"B110(学生研究室)": { building: "研究棟II(B棟)", floor: "1階", note: "右側(教員研究室・実験室)" },
+	"電気室": { building: "研究棟II(B棟)", floor: "1階", note: "左側(学術情報館・情報システム部)" },
+	"院生共同演習室": { building: "研究棟II(B棟)", floor: "1階", note: "左側(学術情報館・情報システム部)" },
+	"学生端末室": { building: "研究棟II(B棟)", floor: "1階", note: "左側(学術情報館・情報システム部)" },
+	"教職員端末室": { building: "研究棟II(B棟)", floor: "1階", note: "左側(学術情報館・情報システム部)" },
+	"倉庫(研究棟II)": { building: "研究棟II(B棟)", floor: "1階", note: "左側(学術情報館・情報システム部)" },
+	"コンピュータマシン室": { building: "研究棟II(B棟)", floor: "1階", note: "左側(学術情報館・情報システム部)" },
+	"情報システム部事務室": { building: "研究棟II(B棟)", floor: "1階", note: "左側(学術情報館・情報システム部)" },
+	"会議室(研究棟II)": { building: "研究棟II(B棟)", floor: "1階", note: "左側(学術情報館・情報システム部)" },
+
+	"B201": { building: "研究棟II(B棟)", floor: "2階", note: "右側(教員研究室)" },
+	"B202": { building: "研究棟II(B棟)", floor: "2階", note: "右側(教員研究室)" },
+	"B203(GLEP事務局)": { building: "研究棟II(B棟)", floor: "2階", note: "右側(教員研究室)" },
+	"B204": { building: "研究棟II(B棟)", floor: "2階", note: "右側(教員研究室),演習室" },
+	"B205": { building: "研究棟II(B棟)", floor: "2階", note: "右側(教員研究室)" },
+	"B206": { building: "研究棟II(B棟)", floor: "2階", note: "右側(教員研究室)" },
+	"B207": { building: "研究棟II(B棟)", floor: "2階", note: "右側(教員研究室)" },
+	"アクセシビリティセンター": { building: "研究棟II(B棟)", floor: "2階", note: "右側(教員研究室)" },
+	"B209": { building: "研究棟II(B棟)", floor: "2階", note: "右側(教員研究室),演習室" },
+	"B210": { building: "研究棟II(B棟)", floor: "2階", note: "右側(教員研究室),演習室" },
+	"B211": { building: "研究棟II(B棟)", floor: "2階", note: "右側(教員研究室),演習室" },
+	"B212": { building: "研究棟II(B棟)", floor: "2階", note: "右側(教員研究室)" },
+	"B213": { building: "研究棟II(B棟)", floor: "2階", note: "右側(教員研究室)" },
+	"B214": { building: "研究棟II(B棟)", floor: "2階", note: "右側(教員研究室)" },
+	"B215": { building: "研究棟II(B棟)", floor: "2階", note: "左側(学術情報館・情報システム部),演習室" },
+	"B216": { building: "研究棟II(B棟)", floor: "2階", note: "左側(学術情報館・情報システム部),演習室" },
+	"B218": { building: "研究棟II(B棟)", floor: "2階", note: "左側(学術情報館・情報システム部)" },
+	"B219(PC1教室)": { building: "研究棟II(B棟)", floor: "2階", note: "左側(学術情報館・情報システム部)" },
+	"B220": { building: "研究棟II(B棟)", floor: "2階", note: "左側(学術情報館・情報システム部)" },
+	"AV機械室": { building: "研究棟II(B棟)", floor: "2階", note: "左側(学術情報館・情報システム部)" },
+
+	"B301": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B302": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B303": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B304": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B305": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B306": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B307": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B308": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B309": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)・演習室" },
+	"B310": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B311": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B312": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B313": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B314": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B315": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B316": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B317": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B318": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)・演習室" },
+	"B319": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)・演習室" },
+	"B320": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B321": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"B322": { building: "研究棟II(B棟)", floor: "3階", note: "右側(教員研究室)" },
+	"看護学部教員室": { building: "研究棟II(B棟)", floor: "3階", note: "左側(学術情報館・情報システム部)" },
+	"機械室(B棟)": { building: "研究棟II(B棟)", floor: "3階", note: "左側(学術情報館・情報システム部)" },
+	"PC2教室(B321)": { building: "研究棟II(B棟)", floor: "3階", note: "左側(学術情報館・情報システム部)" },
+	"準備室(PC教室)": { building: "研究棟II(B棟)", floor: "3階", note: "左側(学術情報館・情報システム部)" },
+	"録音室": { building: "研究棟II(B棟)", floor: "3階", note: "左側(学術情報館・情報システム部)" },
+	"PC3教室(B323)": { building: "研究棟II(B棟)", floor: "3階", note: "左側(学術情報館・情報システム部)" },
+
+	"B401": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B402": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B403": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B404": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B405": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B406": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B407": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B408": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B409": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B410": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B411": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B412": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B413": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B414": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B415": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B416": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B417": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B418": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B419": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+	"B420": { building: "研究棟II(B棟)", floor: "4階", note: "右側(教員研究室)" },
+
+	"C101講義室": { building: "教育棟II(C棟)", floor: "1階", note: "正面" },
+	"C102講義室": { building: "教育棟II(C棟)", floor: "1階", note: "正面" },
+	"C103講義室": { building: "教育棟II(C棟)", floor: "1階", note: "左側" },
+	"C104講義室": { building: "教育棟II(C棟)", floor: "1階", note: "左側" },
+	"C105講義室": { building: "教育棟II(C棟)", floor: "1階", note: "左側" },
+	"C201講義室": { building: "教育棟II(C棟)", floor: "2階", note: "左側" },
+	"C201講義室": { building: "教育棟II(C棟)", floor: "2階", note: "左側" },
+
+	"保健室": { building: "教育棟I(C棟)", floor: "1階", note: "入口すぐ" },
+	"キャリアセンター,神商会": { building: "教育棟I(C棟)", floor: "1階", note: "左側" },
+	"就職資料室": { building: "教育棟I(C棟)", floor: "1階", note: "左側" },
+	"就職相談室": { building: "教育棟I(C棟)", floor: "1階", note: "左側" },
+	"淡水会": { building: "教育棟I(C棟)", floor: "1階", note: "左側" },
+	"プリントセンター": { building: "教育棟I(C棟)", floor: "1階", note: "左側" },
+	"学務課,国際交流・学生課": { building: "教育棟I(C棟)", floor: "1階", note: "教育棟II側の出入口付近" },
+
+	"非常勤講師控室": { building: "教育棟I(C棟)", floor: "2階", note: "左側" },
+	"経営部会議室": { building: "教育棟I(C棟)", floor: "2階", note: "左側" },
+	"C205": { building: "教育棟I(C棟)", floor: "2階", note: "左側・演習室" },
+	"C206": { building: "教育棟I(C棟)", floor: "2階", note: "左側・演習室" },
+	"C207": { building: "教育棟I(C棟)", floor: "2階", note: "左側・演習室" },
+	"C208": { building: "教育棟I(C棟)", floor: "2階", note: "左側・演習室" },
+	"総務課": { building: "教育棟I(C棟)", floor: "2階", note: "階段上って右" },
+	"C211教室": { building: "教育棟I(C棟)", floor: "2階", note: "教育棟II側との渡り廊下付近" },
+	"C212教室": { building: "教育棟I(C棟)", floor: "2階", note: "教育棟II側との渡り廊下付近" },
+
+	"C301": { building: "教育棟I(C棟)", floor: "3階", note: "左側・演習室" },
+	"C302": { building: "教育棟I(C棟)", floor: "3階", note: "左側・演習室" },
+	"C303": { building: "教育棟I(C棟)", floor: "3階", note: "左側・演習室" },
+	"C304": { building: "教育棟I(C棟)", floor: "3階", note: "左側・演習室" },
+	"C305": { building: "教育棟I(C棟)", floor: "3階", note: "左側・演習室" },
+	"C306": { building: "教育棟I(C棟)", floor: "3階", note: "左側・演習室" },
+	"C307": { building: "教育棟I(C棟)", floor: "3階", note: "左側・演習室" },
+	"C308教室": { building: "教育棟I(C棟)", floor: "3階", note: "右側" },
+	"C309教室": { building: "教育棟I(C棟)", floor: "3階", note: "右側" },
+	"C310教室": { building: "教育棟I(C棟)", floor: "3階", note: "右側" },
+	"C311教室": { building: "教育棟I(C棟)", floor: "3階", note: "右側" },
+	"Multi-faith prayer Room": { building: "教育棟I(C棟)", floor: "3階", note: "右側" },
+
+	"C401": { building: "教育棟I(C棟)", floor: "4階", note: "左側・演習室" },
+	"C402": { building: "教育棟I(C棟)", floor: "4階", note: "左側・演習室" },
+	"C403": { building: "教育棟I(C棟)", floor: "4階", note: "左側・演習室" },
+	"C404": { building: "教育棟I(C棟)", floor: "4階", note: "左側・演習室" },
+	"C405": { building: "教育棟I(C棟)", floor: "4階", note: "左側・演習室" },
+	"C406": { building: "教育棟I(C棟)", floor: "4階", note: "左側・演習室" },
+	"C407": { building: "教育棟I(C棟)", floor: "4階", note: "左側・演習室" },
+	"C408教室": { building: "教育棟I(C棟)", floor: "4階", note: "右側" },
+	"C409教室": { building: "教育棟I(C棟)", floor: "4階", note: "右側" },
+	"C410教室": { building: "教育棟I(C棟)", floor: "4階", note: "右側" },
+	"C411教室": { building: "教育棟I(C棟)", floor: "4階", note: "右側" },
+	"C412(会議室)": { building: "教育棟I(C棟)", floor: "4階", note: "右側" },
+
+	"C115教室": { building: "教育棟III(C棟)", floor: "1階", note: "" },
+	"C116教室": { building: "教育棟III(C棟)", floor: "1階", note: "" },
+	"C117教室": { building: "教育棟III(C棟)", floor: "1階", note: "" },
+	"C118教室": { building: "教育棟III(C棟)", floor: "1階", note: "" },
+
+	"学生相談室": { building: "教育棟III(C棟)", floor: "2階", note: "" },
+	"C215(教員室)": { building: "教育棟III(C棟)", floor: "2階", note: "" },
+	"C216講義室": { building: "教育棟III(C棟)", floor: "2階", note: "" },
+
+	"D11(教員研究室)": { building: "研究棟III(C棟)", floor: "1階", note: "" },
+	"D12(教員研究室)": { building: "研究棟III(C棟)", floor: "1階", note: "" },
+	"D13(教員研究室)": { building: "研究棟III(C棟)", floor: "1階", note: "" },
+	"D14(教員研究室)": { building: "研究棟III(C棟)", floor: "1階", note: "" },
+	"D15(教員研究室)": { building: "研究棟III(C棟)", floor: "1階", note: "" },
+	"D16(会議室)": { building: "研究棟III(C棟)", floor: "1階", note: "" },
+	"非常勤講師控室(研究棟II)": { building: "研究棟III(C棟)", floor: "1階", note: "" },
+	"学生ホール": { building: "研究棟III(C棟)", floor: "1階", note: "" },
+
+	"D21講義室": { building: "研究棟III(C棟)", floor: "2階", note: "" },
+	"D22講義室": { building: "研究棟III(C棟)", floor: "2階", note: "" },
+	"D23": { building: "研究棟III(C棟)", floor: "2階", note: "演習室" },
+	"D24(学生研究室)": { building: "研究棟III(C棟)", floor: "2階", note: "" },
+	"D25(教室兼社会科学研究科会計専門職専攻資料室)": { building: "研究棟III(C棟)", floor: "2階", note: "" },
+
+	"D31講義室": { building: "研究棟III(C棟)", floor: "3階", note: "" },
+	"D32": { building: "研究棟III(C棟)", floor: "3階", note: "演習室" },
+	"D33(学生研究室)": { building: "研究棟III(C棟)", floor: "3階", note: "" },
+	"D34(学生研究室)": { building: "研究棟III(C棟)", floor: "3階", note: "" },
+	
+	"ヒックスコレクション(グループ自習室1)": { building: "学術情報館 図書部(E棟)", floor: "1階", note: "" },
+	"E103(グループ学習室2)": { building: "学術情報館 図書部(E棟)", floor: "1階", note: "" },
+	"E104(グループ学習室3)": { building: "学術情報館 図書部(E棟)", floor: "1階", note: "" },
+	"E105(会議室)": { building: "学術情報館 図書部(E棟)", floor: "1階", note: "" },
+	"談話室": { building: "学術情報館 図書部(E棟)", floor: "1階", note: "" },
+	"倉庫(E棟)": { building: "学術情報館 図書部(E棟)", floor: "1階", note: "" },
+	"自習室": { building: "学術情報館 図書部(E棟)", floor: "1階", note: "" },
+
+	"PC自習室": { building: "学術情報館 図書部(E棟)", floor: "2階", note: "" },
+	"館長室": { building: "学術情報館 図書部(E棟)", floor: "2階", note: "" },
+	"事務室(E棟)": { building: "学術情報館 図書部(E棟)", floor: "2階", note: "" },
+	"複写室": { building: "学術情報館 図書部(E棟)", floor: "2階", note: "" },
+	"情報処理室": { building: "学術情報館 図書部(E棟)", floor: "2階", note: "" },
+	"閲覧室": { building: "学術情報館 図書部(E棟)", floor: "2階", note: "" },
+	"洋雑誌室": { building: "学術情報館 図書部(E棟)", floor: "2階", note: "" },
+	
+	"機械室(体育館)": { building: "体育館(F棟)", floor: "1階", note: "" },
+	"柔道場": { building: "体育館(F棟)", floor: "1階", note: "" },
+	"女子更衣室": { building: "体育館(F棟)", floor: "1階", note: "" },
+	"男子更衣室": { building: "体育館(F棟)", floor: "1階", note: "" },
+	"電気室(体育館)": { building: "体育館(F棟)", floor: "1階", note: "" },
+	"修道場": { building: "体育館(F棟)", floor: "1階", note: "" },
+	"トレーニング室": { building: "体育館(F棟)", floor: "1階", note: "" },
+	"器材庫": { building: "体育館(F棟)", floor: "1階", note: "" },
+
+	"コミュニティープラザ(憩いの場)": { building: "大学会館・別館(H棟)", floor: "1階", note: "別館" },
+	"談話室": { building: "大学会館・別館(H棟)", floor: "1階", note: "別館" },
+	"和室兼茶室": { building: "大学会館・別館(H棟)", floor: "1階", note: "別館" },
+	"学友会・淡水会資料室": { building: "大学会館・別館(H棟)", floor: "1階", note: "別館" },
+	"H201": { building: "大学会館・別館(H棟)", floor: "1階", note: "別館" },
+
+	"K101(セミナー室)": { building: "情報科学研究棟(K棟)", floor: "1階", note: "" },
+	"K102(セミナー室)": { building: "情報科学研究棟(K棟)", floor: "1階", note: "" },
+	"K103(セミナー室)": { building: "情報科学研究棟(K棟)", floor: "1階", note: "" },
+	"K104(セミナー室)": { building: "情報科学研究棟(K棟)", floor: "1階", note: "" },
+	"K105(セミナー室)": { building: "情報科学研究棟(K棟)", floor: "1階", note: "" },
+	"K106(セミナー室)": { building: "情報科学研究棟(K棟)", floor: "1階", note: "" },
+	"K107(セミナー室)": { building: "情報科学研究棟(K棟)", floor: "1階", note: "" },
+	"K108(セミナー室)": { building: "情報科学研究棟(K棟)", floor: "1階", note: "" },
+	"K109(セミナー室)": { building: "情報科学研究棟(K棟)", floor: "1階", note: "" },
+	"K110(非常勤講師控室)": { building: "情報科学研究棟(K棟)", floor: "1階", note: "" },
+	"ラーニングコモンズ": { building: "情報科学研究棟(K棟)", floor: "1階, 2階", note: "" },
+
+	"K201講義室": { building: "情報科学研究棟(K棟)", floor: "2階", note: "" },
+	"K202(共同研究室)": { building: "情報科学研究棟(K棟)", floor: "2階", note: "" },
+	"K203(共同研究室)": { building: "情報科学研究棟(K棟)", floor: "2階", note: "" },
+	"K204(共同研究室)": { building: "情報科学研究棟(K棟)", floor: "2階", note: "" },
+	"K205(共同研究室)": { building: "情報科学研究棟(K棟)", floor: "2階", note: "" },
+	"K206(共同研究室)": { building: "情報科学研究棟(K棟)", floor: "2階", note: "" },
+	"アカデミックラウンジ2E": { building: "情報科学研究棟(K棟)", floor: "2階", note: "メインエントランス側" },
+
+	"K301(教員研究室)": { building: "情報科学研究棟(K棟)", floor: "3階", note: "" },
+	"K302(情報管理室)": { building: "情報科学研究棟(K棟)", floor: "3階", note: "" },
+	"K304(データ演習室)": { building: "情報科学研究棟(K棟)", floor: "3階", note: "" },
+	"K305(データ演習室)": { building: "情報科学研究棟(K棟)", floor: "3階", note: "" },
+	"K306(共同研究室)": { building: "情報科学研究棟(K棟)", floor: "3階", note: "" },
+	"K307(共同研究室)": { building: "情報科学研究棟(K棟)", floor: "3階", note: "" },
+	"K308(共同研究室)": { building: "情報科学研究棟(K棟)", floor: "3階", note: "" },
+	"K309(共同研究室)": { building: "情報科学研究棟(K棟)", floor: "3階", note: "" },
+	"K310(共同研究室)": { building: "情報科学研究棟(K棟)", floor: "3階", note: "" },
+	"アカデミックラウンジ3E": { building: "情報科学研究棟(K棟)", floor: "3階", note: "メインエントランス側" },
+	"アカデミックラウンジ3W": { building: "情報科学研究棟(K棟)", floor: "3階", note: "サブエントランス側" },
+
+	"K401(教員研究室)": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K402": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K403": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K404": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K405(教材準備室)": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K406": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K407": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K408": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K409": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K410": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K411": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K412": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K413": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K414": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K415": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K416": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K417": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K418": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K419": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K420": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K421": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K422": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"K423": { building: "情報科学研究棟(K棟)", floor: "4階", note: "" },
+	"アカデミックラウンジ4E": { building: "情報科学研究棟(K棟)", floor: "4階", note: "メインエントランス側" },
+	"アカデミックラウンジ4W": { building: "情報科学研究棟(K棟)", floor: "4階", note: "サブエントランス側" }
+};
+
+const inputEl = document.getElementById("room");
+const suggestionsEl = document.getElementById("suggestions");
+
+let selectedIndex = -1;
+
+// 検索
+function searchRoom(roomInput=null) {
+  const input = (roomInput || inputEl.value).toUpperCase();
+  inputEl.value = input;
+
+  const data = rooms[input];
+  const resultBox = document.getElementById("result");
+
+  if (data) {
+    document.getElementById("result-room").innerText = input;
+    document.getElementById("result-text").innerText =
+      `建物：${data.building}\n階層：${data.floor}\n補足：${data.note}`;
+  } else {
+    document.getElementById("result-room").innerText = "";
+    document.getElementById("result-text").innerText = "教室が見つかりません";
+  }
+
+  resultBox.style.display = "block";
+  suggestionsEl.innerHTML = "";
+  selectedIndex = -1;
+}
+
+// 候補表示
+inputEl.addEventListener("input", function() {
+  const input = this.value.toUpperCase();
+
+  document.getElementById("result").style.display = "none";
+
+  selectedIndex = -1;
+
+  if (input === "") {
+    suggestionsEl.innerHTML = "";
+    return;
+  }
+
+  const suggestions = Object.keys(rooms).filter(key => key.includes(input));
+  suggestionsEl.innerHTML = "";
+
+  suggestions.forEach((key) => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerText = key;
+
+    div.onclick = () => searchRoom(key);
+
+    suggestionsEl.appendChild(div);
+  });
+});
+
+// キー操作
+inputEl.addEventListener("keydown", function(e) {
+  const items = document.querySelectorAll(".item");
+
+  if (items.length === 0) return;
+
+  if (e.key === "ArrowDown" || e.key === "Tab") {
+    e.preventDefault();
+    selectedIndex = (selectedIndex + 1) % items.length;
+    updateSelection(items);
+  }
+
+  if (e.key === "ArrowUp") {
+    e.preventDefault();
+    selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+    updateSelection(items);
+  }
+
+  if (e.key === "Enter") {
+    if (selectedIndex >= 0) {
+      e.preventDefault();
+      items[selectedIndex].click();
+    } else {
+      searchRoom();
+    }
+  }
+});
+
+// 選択状態更新
+function updateSelection(items) {
+  items.forEach((item, index) => {
+    if (index === selectedIndex) {
+      item.classList.add("selected");
+      inputEl.value = item.innerText;
+    } else {
+      item.classList.remove("selected");
+    }
+  });
+}
+
+// フォーカス外
+inputEl.addEventListener("blur", function() {
+  setTimeout(() => {
+    suggestionsEl.innerHTML = "";
+  }, 200);
+});
+</script>
+
+</body>
+</html>
+
+<!--made by akasahama-->
+<!--制作にはAIを使用しています-->
