@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -149,6 +150,26 @@ input {
     <div class="result-title" id="result-room"></div>
     <div class="result-text" id="result-text"></div>
   </div>
+  
+<!-- 地図 -->
+<div id="map-container" style="margin-top:20px; text-align:center;">
+  <div style="position: relative; display:inline-block;">
+    <img src="/classrooms/map.jpg" 
+         style="width:100%; max-width:420px; border-radius:16px;">
+
+    <!-- マーカー -->
+    <div id="marker" style="
+      position:absolute;
+      width:12px;
+      height:12px;
+      background:red;
+      border-radius:50%;
+      transform:translate(-50%, -50%);
+      display:none;
+      box-shadow:0 0 12px rgba(0,0,0,0.3);
+    "></div>
+  </div>
+</div>
 
 </div>
 
@@ -418,25 +439,25 @@ const rooms = {
 	"C215(教員室)": { building: "教育棟III(C棟)", floor: "2階", note: "" },
 	"C216講義室": { building: "教育棟III(C棟)", floor: "2階", note: "" },
 
-	"D11(教員研究室)": { building: "研究棟III(C棟)", floor: "1階", note: "" },
-	"D12(教員研究室)": { building: "研究棟III(C棟)", floor: "1階", note: "" },
-	"D13(教員研究室)": { building: "研究棟III(C棟)", floor: "1階", note: "" },
-	"D14(教員研究室)": { building: "研究棟III(C棟)", floor: "1階", note: "" },
-	"D15(教員研究室)": { building: "研究棟III(C棟)", floor: "1階", note: "" },
-	"D16(会議室)": { building: "研究棟III(C棟)", floor: "1階", note: "" },
-	"非常勤講師控室(研究棟II)": { building: "研究棟III(C棟)", floor: "1階", note: "" },
-	"学生ホール": { building: "研究棟III(C棟)", floor: "1階", note: "" },
+	"D11(教員研究室)": { building: "研究棟III(D棟)", floor: "1階", note: "" },
+	"D12(教員研究室)": { building: "研究棟III(D棟)", floor: "1階", note: "" },
+	"D13(教員研究室)": { building: "研究棟III(D棟)", floor: "1階", note: "" },
+	"D14(教員研究室)": { building: "研究棟III(D棟)", floor: "1階", note: "" },
+	"D15(教員研究室)": { building: "研究棟III(D棟)", floor: "1階", note: "" },
+	"D16(会議室)": { building: "研究棟III(D棟)", floor: "1階", note: "" },
+	"非常勤講師控室(研究棟II)": { building: "研究棟III(D棟)", floor: "1階", note: "" },
+	"学生ホール": { building: "研究棟III(D棟)", floor: "1階", note: "" },
 
-	"D21講義室": { building: "研究棟III(C棟)", floor: "2階", note: "" },
-	"D22講義室": { building: "研究棟III(C棟)", floor: "2階", note: "" },
-	"D23": { building: "研究棟III(C棟)", floor: "2階", note: "演習室" },
-	"D24(学生研究室)": { building: "研究棟III(C棟)", floor: "2階", note: "" },
-	"D25(教室兼社会科学研究科会計専門職専攻資料室)": { building: "研究棟III(C棟)", floor: "2階", note: "" },
+	"D21講義室": { building: "研究棟III(D棟)", floor: "2階", note: "" },
+	"D22講義室": { building: "研究棟III(D棟)", floor: "2階", note: "" },
+	"D23": { building: "研究棟III(D棟)", floor: "2階", note: "演習室" },
+	"D24(学生研究室)": { building: "研究棟III(D棟)", floor: "2階", note: "" },
+	"D25(教室兼社会科学研究科会計専門職専攻資料室)": { building: "研究棟III(D棟)", floor: "2階", note: "" },
 
-	"D31講義室": { building: "研究棟III(C棟)", floor: "3階", note: "" },
-	"D32": { building: "研究棟III(C棟)", floor: "3階", note: "演習室" },
-	"D33(学生研究室)": { building: "研究棟III(C棟)", floor: "3階", note: "" },
-	"D34(学生研究室)": { building: "研究棟III(C棟)", floor: "3階", note: "" },
+	"D31講義室": { building: "研究棟III(D棟)", floor: "3階", note: "" },
+	"D32": { building: "研究棟III(D棟)", floor: "3階", note: "演習室" },
+	"D33(学生研究室)": { building: "研究棟III(D棟)", floor: "3階", note: "" },
+	"D34(学生研究室)": { building: "研究棟III(D棟)", floor: "3階", note: "" },
 	
 	"ヒックスコレクション(グループ自習室1)": { building: "学術情報館 図書部(E棟)", floor: "1階", note: "" },
 	"E103(グループ学習室2)": { building: "学術情報館 図書部(E棟)", floor: "1階", note: "" },
@@ -528,6 +549,20 @@ const rooms = {
 	"アカデミックラウンジ4W": { building: "情報科学研究棟(K棟)", floor: "4階", note: "サブエントランス側" }
 };
 
+// 建物ごとのマップ座標（％で指定）
+const buildingCoords = {
+  "研究棟I(A棟)": { x: 25, y: 49 },
+  "研究棟II(B棟)": { x: 38, y: 45 },
+  "教育棟I(C棟)": { x: 46, y: 36 },
+  "教育棟II(C棟)": { x: 53, y: 36 },
+  "教育棟III(C棟)": { x: 41, y: 36 },
+  "研究棟III(D棟)": { x: 20, y: 41 },
+  "学術情報館 図書部(E棟)": { x: 51, y: 45 },
+  "体育館(F棟)": { x: 57, y: 54 },
+  "大学会館・別館(H棟)": { x: 37, y: 59 },
+  "情報科学研究棟(K棟)": { x: 30, y: 44 }
+};
+
 const inputEl = document.getElementById("room");
 const suggestionsEl = document.getElementById("suggestions");
 
@@ -542,9 +577,11 @@ function searchRoom(roomInput=null) {
   const resultBox = document.getElementById("result");
 
   if (data) {
-    document.getElementById("result-room").innerText = input;
-    document.getElementById("result-text").innerText =
-      `建物：${data.building}\n階層：${data.floor}\n補足：${data.note}`;
+	  document.getElementById("result-room").innerText = input;
+	  document.getElementById("result-text").innerText =
+		`建物：${data.building}\n階層：${data.floor}\n補足：${data.note}`;
+
+	  moveMarker(data.building);
   } else {
     document.getElementById("result-room").innerText = "";
     document.getElementById("result-text").innerText = "教室が見つかりません";
@@ -628,6 +665,21 @@ inputEl.addEventListener("blur", function() {
     suggestionsEl.innerHTML = "";
   }, 200);
 });
+
+function moveMarker(building) {
+  const marker = document.getElementById("marker");
+  const coord = buildingCoords[building];
+
+  if (!coord) {
+    marker.style.display = "none";
+    return;
+  }
+
+  marker.style.left = coord.x + "%";
+  marker.style.top = coord.y + "%";
+  marker.style.display = "block";
+}
+
 </script>
 
 </body>
